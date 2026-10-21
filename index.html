@@ -497,7 +497,7 @@ function viewSales(){
   const LM=new Int8Array(NL), LW=new Int16Array(NL);
   const LD=new Int16Array(NL);
   const lastDay=Math.round((new Date(SD.asof+'T00:00:00')-new Date(2026,3,1))/864e5);
-  const S={tab:'ov',mat:'All',block:'All',cat:'All',meta:'All',mon:'All',grain:'month',meas:'val',tmode:'del',q:'',sel:null,basis:'ord'};
+  const S={tab:'ov',mat:'All',block:'All',cat:'All',meta:'All',mon:'All',df:null,dt:null,grain:'month',meas:'val',tmode:'del',q:'',sel:null,basis:'ord'};
   /* a delivered line sits in the month it was delivered (or the month it was ordered, if the switch says so); every other status sits in its order month */
   function setBasis(){for(let i=0;i<NL;i++){const l=L[i],d=(S.basis==='del'&&l[4]===0&&l[7]>=0)?l[7]:l[2];LD[i]=d;LM[i]=bd(d).getMonth()-3;LW[i]=Math.floor((d+2)/7);}}
   setBasis();
@@ -515,13 +515,13 @@ function viewSales(){
    <li><b>Months:</b> every figure counts an order in the month it was placed. When a month is selected, the “Delivered in” box adds the value delivered in that month, using the delivery date in the report, which includes orders placed in earlier months. Rejected orders marked as delivered but not recorded carry no delivery date, so they use the date the order was last updated.</li>
    <li>Value is the line total price. The Business MAT and block of each RWE come from the Bharatpur RWE and Nandghar mapping file. Ordering accounts that are not in that file (B2B and customer accounts) show as “Not in mapping” and take the block on the order.</li>
    <li><b>Blocks tab:</b> RWEs and Sahelis mapped come from the mapping file, so the table shows every mapped RWE, including those that have not ordered. No sales targets have been set for Bharatpur, so there is no target tracking.</li></ul></details>`;
-  $('#sl-ctl').innerHTML=selectHTML('sl-m','Business MAT',['All',...matsAll],S.mat)+selectHTML('sl-b','Block',['All',...blocks],S.block)+selectHTML('sl-c','Category',['All',...SD.cats],S.cat)+selectHTML('sl-mo','Month',[['All','All months'],...SMON.map((m,i)=>[String(i),m+' 2026']).slice(M0)],S.mon);
+  $('#sl-ctl').innerHTML=selectHTML('sl-m','Business MAT',['All',...matsAll],S.mat)+selectHTML('sl-b','Block',['All',...blocks],S.block)+selectHTML('sl-c','Category',['All',...SD.cats],S.cat)+selectHTML('sl-mo','Month',[['All','All months'],...SMON.map((m,i)=>[String(i),m+' 2026']).slice(M0)],S.mon)+`<label class="ctl">From date<input type="date" id="sl-df" min="2026-04-01" max="${SD.asof}"></label><label class="ctl">To date<input type="date" id="sl-dt" min="2026-04-01" max="${SD.asof}"></label><div class="ctl"><span>Quick dates</span>${pills('sl-q',[['latest','Latest day'],['7','Last 7 days'],['all','All dates']],'all')}</div>`;
   const catOf=p=>SD.cats[SD.pcat[p]];
   function compute(){
     const A={tv:[0,0,0,0],to:[new Set(),new Set(),new Set(),new Set()],tq:0,rw:new Map(),pr:new Map(),mat:new Map(),ser:{month:new Map(),week:new Map(),day:new Map()},rset:new Set()};
     for(let i=0;i<NL;i++){const [r,o,d,p,b,q,v]=L[i],R=RW[r];
       if(S.mat!=='All'&&R.m!==S.mat)continue; if(S.block!=='All'&&R.b!==S.block)continue; if(S.cat!=='All'&&catOf(p)!==S.cat)continue;
-      if(S.meta==='Meta Malls'&&!R.mm)continue; if(S.meta==='Others'&&R.mm)continue; if(S.mon!=='All'&&LM[i]!==+S.mon)continue;
+      if(S.meta==='Meta Malls'&&!R.mm)continue; if(S.meta==='Others'&&R.mm)continue; if(S.mon!=='All'&&LM[i]!==+S.mon)continue; if((S.df!=null&&LD[i]<S.df)||(S.dt!=null&&LD[i]>S.dt))continue;
       A.tv[b]+=v;A.to[b].add(o);A.tq+=q;A.rset.add(r);
       let x=A.rw.get(r);if(!x){x={v:[0,0,0,0],o:new Set(),last:-1,m:[0,0,0,0,0,0,0],mo:[0,0,0,0,0,0,0]};A.rw.set(r,x);}x.v[b]+=v;x.o.add(o);if(d>x.last)x.last=d;x.mo[LM[i]]+=v;if(b===0)x.m[LM[i]]+=v;
       let y=A.pr.get(p);if(!y){y={v:[0,0,0,0],q:0,r:new Set()};A.pr.set(p,y);}y.v[b]+=v;y.q+=q;y.r.add(r);
@@ -539,12 +539,12 @@ function viewSales(){
   function blockStats(A){
     const B={};SD.blocks.forEach(b=>B[b]={b,mapped:SD.bmap[b].rwe,ss:SD.bmap[b].ss,v:[0,0,0,0],o:[new Set(),new Set(),new Set(),new Set()],r:new Set(),mat:{}});
     for(let i=0;i<NL;i++){const [r,o,d,p,b,q,v]=L[i],R=RW[r];
-      if(S.mat!=='All'&&R.m!==S.mat)continue; if(S.cat!=='All'&&catOf(p)!==S.cat)continue; if(S.mon!=='All'&&LM[i]!==+S.mon)continue;
+      if(S.mat!=='All'&&R.m!==S.mat)continue; if(S.cat!=='All'&&catOf(p)!==S.cat)continue; if(S.mon!=='All'&&LM[i]!==+S.mon)continue; if((S.df!=null&&LD[i]<S.df)||(S.dt!=null&&LD[i]>S.dt))continue;
       const x=B[R.b];if(!x)continue;x.v[b]+=v;x.o[b].add(o);x.r.add(r);const m=x.mat[R.m]||(x.mat[R.m]=[0,0,0,0]);m[b]+=v;}
     return Object.values(B);
   }
   function delBox(A,tot){
-    if(S.mon==='All')return '';
+    if(S.mon==='All'||S.df!=null||S.dt!=null)return '';
     const m=+S.mon,mn=SMON[m];let dAny=0,recv=0,early=0;const nAny=new Set();
     for(let i=0;i<NL;i++){const l=L[i],R=RW[l[0]];
       if(S.mat!=='All'&&R.m!==S.mat)continue;if(S.block!=='All'&&R.b!==S.block)continue;if(S.cat!=='All'&&catOf(l[3])!==S.cat)continue;
@@ -646,14 +646,21 @@ function viewSales(){
     const A=compute(); renderHead(A);
     ({ov:tabOv,blk:tabBlk,rwe:tabRwe,prod:tabProd,mat:tabMat,map:tabMap})[S.tab](A);
   }
-  $('#sl-m').onchange=e=>{S.mat=e.target.value;render()};$('#sl-b').onchange=e=>{S.block=e.target.value;render()};$('#sl-c').onchange=e=>{S.cat=e.target.value;render()};$('#sl-mo').onchange=e=>{S.mon=e.target.value;render()};
+  $('#sl-m').onchange=e=>{S.mat=e.target.value;render()};$('#sl-b').onchange=e=>{S.block=e.target.value;render()};$('#sl-c').onchange=e=>{S.cat=e.target.value;render()};const isoD=n=>{const x=bd(n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+  const dnum=t=>Math.round((new Date(t+'T00:00:00')-new Date(2026,3,1))/864e5);
+  function syncDt(){$('#sl-df').value=S.df==null?'':isoD(S.df);$('#sl-dt').value=S.dt==null?'':isoD(S.dt);const a=S.df===lastDay&&S.dt===lastDay,b=S.df===Math.max(0,lastDay-6)&&S.dt===lastDay,c=S.df==null&&S.dt==null;$$('#sl-q button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='latest'?a:x.dataset.v==='7'?b:c));}
+  function setRange(f,t){S.df=f;S.dt=t;if(f!=null||t!=null){S.mon='All';$('#sl-mo').value='All';}syncDt();render();}
+  $('#sl-mo').onchange=e=>{S.mon=e.target.value;S.df=null;S.dt=null;syncDt();render()};
+  $('#sl-df').onchange=e=>{const f=e.target.value?dnum(e.target.value):null;if(f!=null&&S.dt!=null&&f>S.dt)S.dt=f;setRange(f,S.dt)};
+  $('#sl-dt').onchange=e=>{const t=e.target.value?dnum(e.target.value):null;if(t!=null&&S.df!=null&&t<S.df)S.df=t;setRange(S.df,t)};
+  $('#sl-q').onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;if(v==='all')setRange(null,null);else if(v==='latest')setRange(lastDay,lastDay);else setRange(Math.max(0,lastDay-6),lastDay)};
   subBind('sl-tabs',v=>{S.tab=v;render();});
   return {show:()=>render()};
 }
 
 /* ====================== MAT ATTENDANCE ====================== */
 function viewAtt(){
-  const root=$('#v-att'),S={month:'All',mat:'All',date:null,dm:'All'};
+  const root=$('#v-att'),S={month:'All',mat:'All',date:null,dm:'All',af:'',at:''};
   const ROLE={};D.people.forEach(p=>{ROLE[p.id]=p.role;});
   const DM=()=>S.dm==='All'?MATS:MATS.filter(m=>String(m.id)===String(S.dm));
   const ML=()=>S.mat==='All'?MATS:MATS.filter(m=>String(m.id)===String(S.mat));
@@ -670,7 +677,7 @@ function viewAtt(){
   const hm=v=>v==null?'–':String(Math.floor(v/60)).padStart(2,'0')+':'+String(Math.round(v%60)).padStart(2,'0');
   const hh=h=>h==null?'–':Math.floor(h)+' h '+String(Math.round((h%1)*60)).padStart(2,'0')+' m';
   root.innerHTML=`
-  <div class="head"><h2>MAT Attendance</h2><div class="controls">${seg('at-m',[['Sep','September'],['Oct','October'],['All','Both months']],S.month)}<div class="ctl" style="flex:1 1 100%"><span>MAT</span>${pills('at-mat',[['All','All MATs'],...MATS.map(m=>[String(m.id),m.name.split(' ')[0]])],S.mat)}</div></div><p class="headline" id="at-head"></p></div>
+  <div class="head"><h2>MAT Attendance</h2><div class="controls">${seg('at-m',[['Sep','September'],['Oct','October'],['All','Both months']],S.month)}<label class="ctl">From date<input type="date" id="at-df" min="2026-09-01" max="${END}"></label><label class="ctl">To date<input type="date" id="at-dt" min="2026-09-01" max="${END}"></label><div class="ctl"><span>Quick dates</span>${pills('at-q',[['latest','Latest day'],['7','Last 7 days'],['all','All dates']],'all')}</div><div class="ctl" style="flex:1 1 100%"><span>MAT</span>${pills('at-mat',[['All','All MATs'],...MATS.map(m=>[String(m.id),m.name.split(' ')[0]])],S.mat)}</div></div><p class="headline" id="at-head"></p></div>
   <div id="at-kpi"></div>
   <div class="blk"><h3>Day by day</h3><p class="note">Tap a coloured day to open it in the day view below. </p><p class="scrollhint">Swipe sideways to see earlier days. Names stay in place.</p><div class="cal" id="at-cal"></div>
    <div class="legend"><span><i class="sw" style="background:#F7B133"></i>Present</span><span><i class="sw" style="background:linear-gradient(90deg,#F7B133 50%,#fff 50%)"></i>Half day</span><span><i class="sw" style="background:#434343"></i>Worked on a holiday</span><span><i class="sw" style="background:#fff;border:1.5px solid #C94B4B"></i>Absent</span><span><i class="sw" style="background:#EFEDE9"></i>Holiday</span><span><i class="sw" style="background:repeating-linear-gradient(135deg,#fff 0 3px,#E9E5DF 3px 5px)"></i>Not yet onboarded</span></div></div>
@@ -690,7 +697,7 @@ function viewAtt(){
    <li><b>Data gap to note:</b> the daily report for 4 Sep lists only 10 MATs across the whole network, against about 65 on a normal day, so the 4 Sep absences may come from an incomplete extract. They are counted as absent under the standard rule.</li>
    <li><b>Blocks:</b> each visit is placed in a block using the village on the visit, matched to the Bharatpur RWE and Nandghar mapping file. Visits in a village that is not in that file show as “Unmapped”.</li>
    <li><b>Day view:</b> login and logout points are the GPS locations stamped when the MAT starts and ends the day; each village stop groups the MAT’s consecutive RWE visits in that village. Time spent is from the first to the last visit logged there, because the system records visit times only; the gap to the next village includes the travel.</li></ul></details>`;
-  const win=()=>ALL.filter(d=>S.month==='All'||(S.month==='Sep'?d<'2026-10-01':d>='2026-10-01'));
+  const win=()=>ALL.filter(d=>(S.month==='All'||(S.month==='Sep'?d<'2026-10-01':d>='2026-10-01'))&&(!S.af||d>=S.af)&&(!S.at||d<=S.at));
   function stats(m,W){
     const ss=W.map(d=>status(m.id,d)),P=ss.filter(x=>x==='P').length,A=ss.filter(x=>x==='A').length,WS=ss.filter(x=>x==='WS').length,HD=ss.filter(x=>x==='HD').length;
     const recs=W.map(d=>ATT[m.id]&&ATT[m.id][d]).filter(Boolean),st=recs.map(r=>mins(r.start)).filter(x=>x!=null),hr=recs.map(r=>r.hrs).filter(x=>x!=null),vis=sum(recs,r=>r.vis.length);
@@ -810,7 +817,13 @@ function viewAtt(){
     blockCov(W);
     renderDay(W);
   }
-  segBind('at-m',v=>{S.month=v;render();});
+  segBind('at-m',v=>{S.month=v;S.af='';S.at='';syncAt();render();});
+  const addDay=(d,n)=>{const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+  function syncAt(){$('#at-df').value=S.af;$('#at-dt').value=S.at;const f7=addDay(END,-6)<START?START:addDay(END,-6);const a=S.af===END&&S.at===END,b=S.af===f7&&S.at===END,c=!S.af&&!S.at;$$('#at-q button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='latest'?a:x.dataset.v==='7'?b:c));if(S.af||S.at){S.month='All';$$('#at-m button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='All'));}}
+  function setAt(f,t){S.af=f;S.at=t;S.date=null;syncAt();render();}
+  $('#at-df').onchange=e=>{let f=e.target.value,t=S.at;if(f&&t&&f>t)t=f;setAt(f,t)};
+  $('#at-dt').onchange=e=>{let t=e.target.value,f=S.af;if(f&&t&&t<f)f=t;setAt(f,t)};
+  $('#at-q').onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;if(v==='all')setAt('','');else if(v==='latest')setAt(END,END);else setAt(addDay(END,-6)<START?START:addDay(END,-6),END)};
   $('#at-mat').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.mat=b.dataset.v;S.dm=b.dataset.v;render();};
   $('#at-date').onchange=e=>{S.date=e.target.value;render();};$('#at-dm').onchange=e=>{S.dm=e.target.value;render();};
   const step=n=>{const W=win(),i=W.indexOf(S.date)+n;if(i>=0&&i<W.length){S.date=W[i];render();}};$('#at-dp').onclick=()=>step(-1);$('#at-dn').onclick=()=>step(1);
