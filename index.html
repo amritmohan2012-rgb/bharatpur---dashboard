@@ -596,7 +596,7 @@ function viewSales(){
       if(S.mat!=='All'&&R.m!==S.mat)continue; if((S.block!=='All'&&R.b!==S.block||S.ty!=='All'&&TY(R)!==S.ty||S.wp!=='All'&&WP(R)!==S.wp))continue; if(S.cat!=='All'&&catOf(p)!==S.cat)continue;
       if(S.meta==='Meta Malls'&&!R.mm)continue; if(S.meta==='Others'&&R.mm)continue; if(S.mon!=='All'&&LM[i]!==+S.mon)continue; if((S.df!=null&&LD[i]<S.df)||(S.dt!=null&&LD[i]>S.dt))continue;
       A.tv[b]+=v;A.to[b].add(o);A.tq+=q;A.rset.add(r);
-      let x=A.rw.get(r);if(!x){x={v:[0,0,0,0],o:new Set(),last:-1,m:[0,0,0,0,0,0,0],mo:[0,0,0,0,0,0,0]};A.rw.set(r,x);}x.v[b]+=v;x.o.add(o);if(d>x.last)x.last=d;x.mo[LM[i]]+=v;if(b===0)x.m[LM[i]]+=v;
+      let x=A.rw.get(r);if(!x){x={v:[0,0,0,0],o:new Set(),last:-1,m:Array(SMON.length).fill(0),mo:Array(SMON.length).fill(0)};A.rw.set(r,x);}x.v[b]+=v;x.o.add(o);if(d>x.last)x.last=d;x.mo[LM[i]]+=v;if(b===0)x.m[LM[i]]+=v;
       let y=A.pr.get(p);if(!y){y={v:[0,0,0,0],q:0,r:new Set()};A.pr.set(p,y);}y.v[b]+=v;y.q+=q;y.r.add(r);
       let z=A.mat.get(R.m);if(!z){z={v:[0,0,0,0],o:new Set(),r:new Set()};A.mat.set(R.m,z);}z.v[b]+=v;z.o.add(o);z.r.add(r);
       [['month',LM[i]],['week',LW[i]],['day',LD[i]]].forEach(([g,k])=>{let s=A.ser[g].get(k);if(!s){s={v:[0,0,0,0],o:[new Set(),new Set(),new Set(),new Set()],r:new Set()};A.ser[g].set(k,s);}s.v[b]+=v;s.o[b].add(o);s.r.add(r);});
